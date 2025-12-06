@@ -249,7 +249,7 @@ def log_to_csv(data: Dict[str, Any]) -> None:
 # ============================================
 # MQTT HANDLERS
 # ============================================
-def on_connect(client: mqtt.Client, userdata: Any, flags: Any, rc: int) -> None:
+def on_connect(client: mqtt.Client, userdata: Any, flags: Any, rc: int, properties: Any = None) -> None:
     """Callback for MQTT connection."""
     if rc == 0:
         st.session_state.connected = True
@@ -321,7 +321,7 @@ def setup_mqtt() -> None:
     """Initializes and connects the MQTT client."""
     if st.session_state.mqtt_client is None:
         client_id = f"Streamlit_Dashboard_{int(time.time())}"
-        client = mqtt.Client(client_id=client_id)
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=client_id)
         client.on_connect = on_connect
         client.on_message = on_message
 

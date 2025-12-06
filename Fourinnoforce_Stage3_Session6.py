@@ -18,6 +18,159 @@ TOPIC_OUTPUT = "fourinnoforce/class/session5/output"
 MODEL_FILE = "iot_temp_model.pkl"
 
 # -------------------------------------------------------------
+# PAGE CONFIG
+# -------------------------------------------------------------
+st.set_page_config(
+    page_title="IoT Dashboard",
+    page_icon="🌡️",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+# -------------------------------------------------------------
+# MODERN CSS STYLING
+# -------------------------------------------------------------
+st.markdown("""
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    
+    * {
+        font-family: 'Inter', sans-serif;
+    }
+    
+    .main {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+    }
+    
+    .stApp {
+        background: transparent;
+    }
+    
+    /* Header Styling */
+    h1 {
+        color: white !important;
+        font-weight: 700 !important;
+        text-align: center;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        margin-bottom: 2rem !important;
+    }
+    
+    h2, h3 {
+        color: white !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Card Styling */
+    .css-1r6slb0 {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        backdrop-filter: blur(10px);
+    }
+    
+    /* Metric Cards */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem !important;
+        font-weight: 700 !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        font-size: 0.9rem !important;
+        color: #666 !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Button Styling */
+    .stButton>button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+    }
+    
+    /* Status Box */
+    .status-box {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .status-hot {
+        border-left: 5px solid #FF4B4B;
+    }
+    
+    .status-normal {
+        border-left: 5px solid #00C851;
+    }
+    
+    /* Data Info Box */
+    .info-box {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        padding: 1rem;
+        margin: 0.5rem 0;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Download Button */
+    .stDownloadButton>button {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stDownloadButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(17, 153, 142, 0.4);
+    }
+    
+    /* Chart Container */
+    .stPlotlyChart {
+        background: white;
+        border-radius: 15px;
+        padding: 1rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        color: white !important;
+        font-weight: 600;
+    }
+    
+    /* DataFrame */
+    .dataframe {
+        border-radius: 10px;
+        overflow: hidden;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# -------------------------------------------------------------
 # ML MODEL LOADING
 # -------------------------------------------------------------
 @st.cache_resource
@@ -34,12 +187,10 @@ def load_model():
 ml_model = load_model()
 
 def predict_status(temp, hum):
-    # Rule-based fallback
     if ml_model is None:
         return "Panas" if temp > 30 else "Normal"
     
     try:
-        # Predict using ML
         features = np.array([[temp, hum]])
         prediction = ml_model.predict(features)[0]
         
@@ -84,7 +235,6 @@ def on_message(client, userdata, msg):
         temp = float(data.get("temp", 0))
         hum = float(data.get("hum", 0))
         
-        # ML Prediction
         status = predict_status(temp, hum)
         
         row = {
@@ -94,11 +244,9 @@ def on_message(client, userdata, msg):
             "status": status
         }
 
-        # Update Session State
         st.session_state.last_data = row
         st.session_state.logs.append(row)
         
-        # Auto-Control (Feedback)
         command = "BUZZER_ON" if status == "Panas" else "BUZZER_OFF"
         client.publish(TOPIC_OUTPUT, command)
 
@@ -109,78 +257,123 @@ def on_message(client, userdata, msg):
 # START MQTT CLIENT
 # -------------------------------------------------------------
 if st.session_state.mqtt is None:
-    # Use VERSION2 for compatibility
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     client.on_connect = on_connect
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)
-    client.loop_start() # Use loop_start for non-blocking background thread
-    # Note: User template used polling loop(), but loop_start() is generally safer 
-    # if we want to avoid blocking the UI render. 
-    # However, user explicitly asked for polling template.
-    # Let's stick to user's request for polling loop at the end of script.
-    client.loop_stop() # Stop it if it was started, we will use manual loop
-    
     st.session_state.mqtt = client
 
 # -------------------------------------------------------------
 # STREAMLIT UI
 # -------------------------------------------------------------
-st.title("🔥 IoT Realtime Dashboard (Polling Mode)")
+st.title("🌡️ IoT Machine Learning Dashboard")
 
-left, right = st.columns([1, 2])
+# Connection Status Banner
+if st.session_state.connected:
+    st.success("✅ Connected to MQTT Broker: " + MQTT_BROKER)
+else:
+    st.error("❌ Disconnected from MQTT Broker")
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Main Layout
+col1, col2 = st.columns([1, 2])
 
 # ===================== LEFT PANEL ============================
-with left:
-    st.subheader("System Status")
-    st.metric("MQTT Connected", "Yes" if st.session_state.connected else "No")
-    
+with col1:
+    # Model Status
+    st.markdown("### 🎯 System Status")
     if ml_model is not None:
         st.success("✅ ML Model Active")
     else:
-        st.warning("⚠️ Using Rule-Based")
-
-    st.subheader("Latest Reading")
+        st.warning("⚠️ Using Rule-Based System")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Latest Reading
+    st.markdown("### 📊 Latest Reading")
+    
     if st.session_state.last_data:
         data = st.session_state.last_data
-        st.metric("Temperature", f"{data['temp']} °C")
-        st.metric("Humidity", f"{data['hum']} %")
         
-        status_color = "red" if data['status'] == "Panas" else "green"
-        st.markdown(f"Status: :{status_color}[**{data['status']}**]")
+        # Temperature & Humidity Metrics
+        col_temp, col_hum = st.columns(2)
+        with col_temp:
+            st.metric("🌡️ Temp", f"{data['temp']}°C")
+        with col_hum:
+            st.metric("💧 Hum", f"{data['hum']}%")
+        
+        # Status Box
+        status_class = "status-hot" if data['status'] == "Panas" else "status-normal"
+        status_emoji = "🔥" if data['status'] == "Panas" else "✅"
+        status_color = "#FF4B4B" if data['status'] == "Panas" else "#00C851"
+        
+        st.markdown(f"""
+        <div class="status-box {status_class}">
+            <h2 style="color: {status_color}; margin: 0;">{status_emoji} {data['status']}</h2>
+            <p style="color: #666; margin: 0.5rem 0 0 0; font-size: 0.9rem;">Classification Status</p>
+        </div>
+        """, unsafe_allow_html=True)
     else:
-        st.info("Waiting for data...")
-
-    st.subheader("Manual Control")
-    col_a, col_b = st.columns(2)
-    with col_a:
-        if st.button("🔔 ON"):
+        st.info("⏳ Waiting for sensor data...")
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Manual Control
+    st.markdown("### 🎛️ Manual Control")
+    col_on, col_off = st.columns(2)
+    with col_on:
+        if st.button("🔔 BUZZER ON", use_container_width=True):
             st.session_state.mqtt.publish(TOPIC_OUTPUT, "BUZZER_ON")
-    with col_b:
-        if st.button("🔕 OFF"):
+            st.success("Sent!")
+    with col_off:
+        if st.button("🔕 BUZZER OFF", use_container_width=True):
             st.session_state.mqtt.publish(TOPIC_OUTPUT, "BUZZER_OFF")
+            st.success("Sent!")
 
 # ===================== RIGHT PANEL ===========================
-with right:
-    st.subheader("Live Monitor")
-
+with col2:
+    st.markdown("### 📈 Real-Time Monitoring")
+    
     if len(st.session_state.logs) > 0:
         df = pd.DataFrame(st.session_state.logs)
-        st.line_chart(df.set_index("ts")[["temp", "hum"]])
         
-        with st.expander("View Raw Data"):
-            st.dataframe(df.tail(10))
-            st.download_button("Download CSV", df.to_csv().encode("utf-8"), "log.csv")
+        # Line Chart
+        st.line_chart(
+            df.set_index("ts")[["temp", "hum"]], 
+            use_container_width=True,
+            height=400
+        )
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Data Table in Expander
+        with st.expander("📋 View Raw Data", expanded=False):
+            # Show recent 15 records
+            recent_df = df.tail(15).iloc[::-1]  # Reverse to show newest first
+            st.dataframe(
+                recent_df, 
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            # Download Button
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Full Log (CSV)",
+                data=csv,
+                file_name=f"iot_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
     else:
-        st.info("No data yet. Waiting for ESP32...")
+        st.info("📡 No data received yet. Waiting for ESP32...")
 
 # -------------------------------------------------------------
 # MQTT LOOP POLLING
 # -------------------------------------------------------------
-# This is the key part for stability on Streamlit Cloud
 if st.session_state.mqtt is not None:
     st.session_state.mqtt.loop(timeout=0.05)
 
-# Auto refresh every 1 second
 time.sleep(1)
 st.rerun()

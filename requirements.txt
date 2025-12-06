@@ -2,5 +2,5 @@ streamlit
 paho-mqtt
 pandas
 plotly
-numpy
+numpy>=2.0.0
 scikit-learn
